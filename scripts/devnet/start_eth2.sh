@@ -16,14 +16,14 @@ EL_BOOTNODES_ARG="--bootnodes enode://$EL_SEED_ENODE@${ips[0]}:30303"
 
 # Start geth
 EL_COMMON_ARGS="--config geth-config.toml --datadir geth"
-EL_COMMON_ARGS="$EL_COMMON_ARGS --metrics --metrics.addr=0.0.0.0 --metrics.port=9001 --networkid 80087"
+EL_COMMON_ARGS="$EL_COMMON_ARGS --networkid 80087"
 for ((i=0; i<$NUM_NODES; i++)) do
     if [ $i -eq 0 ]; then
         ssh $user@${ips[$i]} "cd $DEVNET_DIR; nohup ./bin/geth $EL_COMMON_ARGS > geth.log 2>&1 &"
-        sleep 20
+        #sleep 20
     else
-        ssh $user@${ips[$i]} "cd $DEVNET_DIR; nohup ./bin/geth $EL_COMMON_ARGS $EL_BOOTNODES_ARG > geth.log 2>&1 &"
-        sleep 20
+        ssh $user@${ips[$i]} "cd $DEVNET_DIR; nohup ./bin/geth $EL_COMMON_ARGS > geth.log 2>&1 &"
+        #sleep 20
     fi
 done
 
@@ -43,11 +43,7 @@ CL_COMMON_ARGS="--rpc.laddr tcp://0.0.0.0:26657 \
     --pruning=nothing"
 # CL_COMMON_ARGS="$CL_COMMON_ARGS --beacon-kit.logger.log-level debug"
 for ((i=0; i<$NUM_NODES; i++)) do
-    if [ $i -eq 0 ]; then
-        cl_seeds="--p2p.seed_mode true"
-    else
-        cl_seeds="--p2p.seeds $CL_SEED_NODE_ID@${ips[0]}:26656"
-    fi
+    cl_seeds="--p2p.seeds $CL_SEED_NODE_ID@${ips[0]}:26656"
 
     ssh $user@${ips[$i]} "cd $DEVNET_DIR; \
         export CHAIN_SPEC=devnet; \
@@ -57,5 +53,5 @@ for ((i=0; i<$NUM_NODES; i++)) do
             --p2p.external_address ${ips[$i]}:26656 \
             > beacond.log 2>&1 &"
 
-    sleep 20
+    #sleep 20
 done
