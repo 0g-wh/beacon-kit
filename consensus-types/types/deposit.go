@@ -111,6 +111,8 @@ func (d *Deposit) HashTreeRoot() common.Root {
 	return ssz.HashSequential(d)
 }
 
+func (*Deposit) ValidateAfterDecodingSSZ() error { return nil }
+
 /* -------------------------------------------------------------------------- */
 /*                                   FastSSZ                                  */
 /* -------------------------------------------------------------------------- */

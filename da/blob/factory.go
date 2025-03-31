@@ -139,7 +139,7 @@ func (f *SidecarFactory) BuildBlockBodyProof(
 		return nil, err
 	}
 
-	return tree.MerkleProof(ctypes.KZGPositionDeneb)
+	return tree.MerkleProof(ctypes.KZGPosition)
 }
 
 // BuildCommitmentProof builds a commitment proof.
