@@ -78,7 +78,6 @@ func (ee *Engine) GetPayload(
 ) (ctypes.BuiltExecutionPayloadEnv, error) {
 	return ee.ec.GetPayload(
 		ctx, req.PayloadID,
-		req.ForkVersion,
 	)
 }
 
@@ -96,7 +95,6 @@ func (ee *Engine) NotifyForkchoiceUpdate(
 		ctx,
 		req.State,
 		req.PayloadAttributes,
-		req.ForkVersion,
 	)
 
 	switch {
@@ -159,13 +157,12 @@ func (ee *Engine) NotifyForkchoiceUpdate(
 //nolint:funlen
 func (ee *Engine) VerifyAndNotifyNewPayload(
 	ctx context.Context,
-	req *ctypes.NewPayloadRequest,
+	req ctypes.NewPayloadRequest,
 ) error {
 	// Log the new payload attempt.
 	ee.metrics.markNewPayloadCalled(
-		req.ExecutionPayload.GetBlockHash(),
-		req.ExecutionPayload.GetParentHash(),
-		req.Optimistic,
+		req.GetExecutionPayload().GetBlockHash(),
+		req.GetExecutionPayload().GetParentHash(),
 	)
 
 	// First we verify the block hash and versioned hashes are valid.
@@ -179,9 +176,7 @@ func (ee *Engine) VerifyAndNotifyNewPayload(
 	// Otherwise we will send the payload to the execution client.
 	lastValidHash, err := ee.ec.NewPayload(
 		ctx,
-		req.ExecutionPayload,
-		req.VersionedHashes,
-		req.ParentBeaconBlockRoot,
+		req,
 	)
 
 	// We abstract away some of the complexity and categorize status codes
@@ -197,9 +192,8 @@ func (ee *Engine) VerifyAndNotifyNewPayload(
 		engineerrors.ErrSyncingPayloadStatus,
 	):
 		ee.metrics.markNewPayloadAcceptedSyncingPayloadStatus(
-			req.ExecutionPayload.GetBlockHash(),
-			req.ExecutionPayload.GetParentHash(),
-			req.Optimistic,
+			req.GetExecutionPayload().GetBlockHash(),
+			req.GetExecutionPayload().GetParentHash(),
 		)
 
 	// These two cases are semantically the same:
@@ -210,8 +204,7 @@ func (ee *Engine) VerifyAndNotifyNewPayload(
 		engineerrors.ErrInvalidBlockHashPayloadStatus,
 	):
 		ee.metrics.markNewPayloadInvalidPayloadStatus(
-			req.ExecutionPayload.GetBlockHash(),
-			req.Optimistic,
+			req.GetExecutionPayload().GetBlockHash(),
 		)
 
 		// We want to return bad block irrespective of
@@ -227,44 +220,22 @@ func (ee *Engine) VerifyAndNotifyNewPayload(
 		}
 
 		ee.metrics.markNewPayloadJSONRPCError(
-			req.ExecutionPayload.GetBlockHash(),
+			req.GetExecutionPayload().GetBlockHash(),
 			*lastValidHash,
-			req.Optimistic,
 			err,
 		)
 
 		err = errors.Join(err, engineerrors.ErrPreDefinedJSONRPC)
 	case err != nil:
 		ee.metrics.markNewPayloadUndefinedError(
-			req.ExecutionPayload.GetBlockHash(),
-			req.Optimistic,
+			req.GetExecutionPayload().GetBlockHash(),
 			err,
 		)
 	default:
 		ee.metrics.markNewPayloadValid(
-			req.ExecutionPayload.GetBlockHash(),
-			req.ExecutionPayload.GetParentHash(),
-			req.Optimistic,
+			req.GetExecutionPayload().GetBlockHash(),
+			req.GetExecutionPayload().GetParentHash(),
 		)
-	}
-
-	// Under the optimistic condition, we are fine ignoring the error. This
-	// is mainly to allow us to safely call the execution client
-	// during abci.FinalizeBlock. If we are in abci.FinalizeBlock and
-	// we get an error here, we make the assumption that
-	// abci.ProcessProposal
-	// has deemed that the BeaconBlock containing the given ExecutionPayload
-	// was marked as valid by an honest majority of validators, and we
-	// don't want to halt the chain because of an error here.
-	//
-	// The practical reason we want to handle this edge case
-	// is to protect against an awkward shutdown condition in which an
-	// execution client dies between the end of abci.ProcessProposal
-	// and the beginning of abci.FinalizeBlock. Without handling this case
-	// it would cause a failure of abci.FinalizeBlock and a
-	// "CONSENSUS FAILURE!!!!" at the CometBFT layer.
-	if req.Optimistic {
-		return nil
 	}
 	return err
 }

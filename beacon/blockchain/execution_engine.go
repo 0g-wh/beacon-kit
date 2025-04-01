@@ -50,7 +50,6 @@ func (s *Service) sendPostBlockFCU(
 
 	// Send a forkchoice update without payload attributes to notify
 	// EL of the new head.
-	beaconBlk := blk.GetBeaconBlock()
 	if _, _, err = s.executionEngine.NotifyForkchoiceUpdate(
 		ctx,
 		// TODO: Switch to New().
@@ -61,7 +60,6 @@ func (s *Service) sendPostBlockFCU(
 					SafeBlockHash:      lph.GetParentHash(),
 					FinalizedBlockHash: lph.GetParentHash(),
 				},
-				s.chainSpec.ActiveForkVersionForSlot(beaconBlk.GetSlot()),
 			),
 	); err != nil {
 		s.logger.Error(

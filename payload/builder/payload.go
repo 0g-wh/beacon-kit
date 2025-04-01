@@ -74,7 +74,6 @@ func (pb *PayloadBuilder) RequestPayloadAsync(
 				FinalizedBlockHash: finalEth1BlockHash,
 			},
 			PayloadAttributes: attrs,
-			ForkVersion:       pb.chainSpec.ActiveForkVersionForSlot(slot),
 		},
 	)
 	if err != nil {
@@ -237,7 +236,6 @@ func (pb *PayloadBuilder) SendForceHeadFCU(
 				FinalizedBlockHash: lph.GetParentHash(),
 			},
 			PayloadAttributes: attrs,
-			ForkVersion:       pb.chainSpec.ActiveForkVersionForSlot(slot),
 		},
 	)
 	return err
@@ -251,8 +249,7 @@ func (pb *PayloadBuilder) getPayload(
 	envelope, err := pb.ee.GetPayload(
 		ctx,
 		&ctypes.GetPayloadRequest{
-			PayloadID:   payloadID,
-			ForkVersion: pb.chainSpec.ActiveForkVersionForSlot(slot),
+			PayloadID: payloadID,
 		},
 	)
 	if err != nil {

@@ -35,19 +35,21 @@ import (
 /*                                 NewPayload                                 */
 /* -------------------------------------------------------------------------- */
 
-// NewPayload calls the engine_newPayloadV3 method via JSON-RPC.
+// NewPayload calls the appropriate version of the Engine API NewPayload method.
 func (s *Client) NewPayload(
 	ctx context.Context,
-	payload *ctypes.ExecutionPayload,
-	versionedHashes []common.ExecutionHash,
-	parentBlockRoot *common.Root,
+	req ctypes.NewPayloadRequest,
 ) (*engineprimitives.PayloadStatusV1, error) {
-	if payload.Version() < version.Deneb {
-		return nil, ErrInvalidVersion
+	executionRequests, err := req.GetExecutionRequests()
+	if err != nil {
+		return nil, err
 	}
-
-	return s.NewPayloadV3(
-		ctx, payload, versionedHashes, parentBlockRoot,
+	return s.NewPayloadV4(
+		ctx,
+		req.GetExecutionPayload(),
+		req.GetVersionedHashes(),
+		req.GetParentBeaconBlockRoot(),
+		executionRequests,
 	)
 }
 
@@ -67,6 +69,23 @@ func (s *Client) NewPayloadV3(
 	return result, nil
 }
 
+// NewPayloadV4 calls the engine_newPayloadV4 via JSON-RPC.
+func (s *Client) NewPayloadV4(
+	ctx context.Context,
+	payload *ctypes.ExecutionPayload,
+	versionedHashes []common.ExecutionHash,
+	parentBlockRoot *common.Root,
+	executionRequests []ctypes.EncodedExecutionRequest,
+) (*engineprimitives.PayloadStatusV1, error) {
+	result := &engineprimitives.PayloadStatusV1{}
+	if err := s.Call(
+		ctx, result, NewPayloadMethodV4, payload, versionedHashes, parentBlockRoot, executionRequests,
+	); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 /* -------------------------------------------------------------------------- */
 /*                              ForkchoiceUpdated                             */
 /* -------------------------------------------------------------------------- */
@@ -77,11 +96,7 @@ func (s *Client) ForkchoiceUpdated(
 	ctx context.Context,
 	state *engineprimitives.ForkchoiceStateV1,
 	attrs any,
-	forkVersion uint32,
 ) (*engineprimitives.ForkchoiceResponseV1, error) {
-	if forkVersion < version.Deneb {
-		return nil, ErrInvalidVersion
-	}
 
 	return s.ForkchoiceUpdatedV3(ctx, state, attrs)
 }
@@ -127,13 +142,8 @@ func (s *Client) forkchoiceUpdated(
 func (s *Client) GetPayload(
 	ctx context.Context,
 	payloadID engineprimitives.PayloadID,
-	forkVersion uint32,
 ) (ctypes.BuiltExecutionPayloadEnv, error) {
-	if forkVersion < version.Deneb {
-		return nil, ErrInvalidVersion
-	}
-
-	return s.GetPayloadV3(ctx, payloadID)
+	return s.GetPayloadV4(ctx, payloadID)
 }
 
 // GetPayloadV3 calls the engine_getPayloadV3 method via JSON-RPC.
@@ -149,6 +159,25 @@ func (s *Client) GetPayloadV3(
 
 	if err := s.Call(
 		ctx, result, GetPayloadMethodV3, payloadID,
+	); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// GetPayloadV4 calls the engine_getPayloadV4 method via JSON-RPC.
+func (s *Client) GetPayloadV4(
+	ctx context.Context, payloadID engineprimitives.PayloadID,
+) (ctypes.BuiltExecutionPayloadEnv, error) {
+	var t *ctypes.ExecutionPayload
+	result := &ctypes.ExecutionPayloadEnvelope[*engineprimitives.BlobsBundleV1[
+		eip4844.KZGCommitment, eip4844.KZGProof, eip4844.Blob,
+	]]{
+		ExecutionPayload: t.Empty(version.Deneb),
+	}
+
+	if err := s.Call(
+		ctx, result, GetPayloadMethodV4, payloadID,
 	); err != nil {
 		return nil, err
 	}

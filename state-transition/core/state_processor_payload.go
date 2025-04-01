@@ -147,14 +147,13 @@ func (sp *StateProcessor[_]) validateStatefulPayload(
 		)
 	}
 
-	parentBeaconBlockRoot := blk.GetParentBlockRoot()
+	req, err := buildNewPayloadRequestFromFork(blk)
+	if err != nil {
+		return err
+	}
+
 	if err = sp.executionEngine.VerifyAndNotifyNewPayload(
-		ctx, ctypes.BuildNewPayloadRequest(
-			payload,
-			body.GetBlobKzgCommitments().ToVersionedHashes(),
-			&parentBeaconBlockRoot,
-			optimisticEngine,
-		),
+		ctx, req,
 	); err != nil {
 		return err
 	}
@@ -181,4 +180,27 @@ func (sp *StateProcessor[_]) validateStatefulPayload(
 	}
 
 	return nil
+}
+
+func buildNewPayloadRequestFromFork(blk *ctypes.BeaconBlock) (ctypes.NewPayloadRequest, error) {
+	body := blk.GetBody()
+	payload := body.GetExecutionPayload()
+	parentBeaconBlockRoot := blk.GetParentBlockRoot()
+	var executionRequestsList []ctypes.EncodedExecutionRequest
+	// If we're post-electra, we set execution requests.
+	var executionRequests *ctypes.ExecutionRequests
+	executionRequests, err := body.GetExecutionRequests()
+	if err != nil {
+		return nil, err
+	}
+	executionRequestsList, err = ctypes.GetExecutionRequestsList(executionRequests)
+	if err != nil {
+		return nil, err
+	}
+	return ctypes.BuildNewPayloadRequestWithExecutionRequests(
+		payload,
+		body.GetBlobKzgCommitments().ToVersionedHashes(),
+		&parentBeaconBlockRoot,
+		executionRequestsList,
+	), nil
 }

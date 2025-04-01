@@ -349,6 +349,24 @@ func (s *Service) buildBlockBody(
 		body.SetSlashingInfo(slotData.GetSlashingInfo())
 	}
 	body.SetExecutionPayload(envelope.GetExecutionPayload())
+
+	var requests *ctypes.ExecutionRequests
+	// TODO(pectra): Remove the conversion once DecodeExecutionRequests constructor changed.
+	encodedReqs := envelope.GetEncodedExecutionRequests()
+	result := make([][]byte, len(encodedReqs))
+	for i, req := range encodedReqs {
+		result[i] = req // conversion from ExecutionRequest to []byte
+	}
+
+	requests, err = ctypes.DecodeExecutionRequests(result)
+	if err != nil {
+		return err
+	}
+	err = body.SetExecutionRequests(requests)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

@@ -39,9 +39,7 @@ import (
 // NewPayload calls the engine_newPayloadVX method via JSON-RPC.
 func (s *EngineClient) NewPayload(
 	ctx context.Context,
-	payload *ctypes.ExecutionPayload,
-	versionedHashes []common.ExecutionHash,
-	parentBeaconBlockRoot *common.Root,
+	req ctypes.NewPayloadRequest,
 ) (*common.ExecutionHash, error) {
 	var (
 		startTime    = time.Now()
@@ -51,9 +49,7 @@ func (s *EngineClient) NewPayload(
 	defer cancel()
 
 	// Call the appropriate RPC method based on the payload version.
-	result, err := s.Client.NewPayload(
-		cctx, payload, versionedHashes, parentBeaconBlockRoot,
-	)
+	result, err := s.Client.NewPayload(cctx, req)
 	if err != nil {
 		if errors.Is(err, engineerrors.ErrEngineAPITimeout) {
 			s.metrics.incrementNewPayloadTimeout()
@@ -86,7 +82,6 @@ func (s *EngineClient) ForkchoiceUpdated(
 	ctx context.Context,
 	state *engineprimitives.ForkchoiceStateV1,
 	attrs *engineprimitives.PayloadAttributes,
-	forkVersion uint32,
 ) (*engineprimitives.PayloadID, *common.ExecutionHash, error) {
 	var (
 		startTime    = time.Now()
@@ -105,7 +100,7 @@ func (s *EngineClient) ForkchoiceUpdated(
 	}
 
 	result, err := s.Client.ForkchoiceUpdated(
-		cctx, state, attrs, forkVersion,
+		cctx, state, attrs,
 	)
 
 	if err != nil {
@@ -134,7 +129,6 @@ func (s *EngineClient) ForkchoiceUpdated(
 func (s *EngineClient) GetPayload(
 	ctx context.Context,
 	payloadID engineprimitives.PayloadID,
-	forkVersion uint32,
 ) (ctypes.BuiltExecutionPayloadEnv, error) {
 	var (
 		startTime    = time.Now()
@@ -144,7 +138,7 @@ func (s *EngineClient) GetPayload(
 	defer cancel()
 
 	// Call and check for errors.
-	result, err := s.Client.GetPayload(cctx, payloadID, forkVersion)
+	result, err := s.Client.GetPayload(cctx, payloadID)
 	if err != nil {
 		if errors.Is(err, engineerrors.ErrEngineAPITimeout) {
 			s.metrics.incrementGetPayloadTimeout()

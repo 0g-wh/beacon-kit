@@ -42,4 +42,8 @@ var (
 
 	// ErrNilPayloadHeader is an error for when the payload header is nil.
 	ErrNilPayloadHeader = errors.New("nil payload header")
+
+	// ErrNilValue is an error for when a getter returns nil on a value
+	// It should generally not occur unless we have a bug in our code and is used for defensive programming.
+	ErrNilValue = errors.New("unexpected nil value")
 )
