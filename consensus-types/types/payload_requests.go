@@ -271,13 +271,3 @@ type GetPayloadRequest struct {
 	// PayloadID is the payload ID.
 	PayloadID engineprimitives.PayloadID
 }
-
-// BuildGetPayloadRequest builds a get payload request.
-func BuildGetPayloadRequest(
-	payloadID engineprimitives.PayloadID,
-	forkVersion common.Version,
-) *GetPayloadRequest {
-	return &GetPayloadRequest{
-		PayloadID: payloadID,
-	}
-}
