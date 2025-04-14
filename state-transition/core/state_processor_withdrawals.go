@@ -91,6 +91,15 @@ func (sp *StateProcessor[_]) processWithdrawals(
 		); err != nil {
 			return err
 		}
+		validator, err := st.ValidatorByIndex(expectedWithdrawals[i].GetValidatorIndex())
+		if err != nil {
+			return err
+		}
+		validator.SetWithdrawlAmount(0)
+		err = st.UpdateValidatorAtIndex(expectedWithdrawals[i].GetValidatorIndex(), validator)
+		if err != nil {
+			return err
+		}
 	}
 
 	if numWithdrawals > 1 {

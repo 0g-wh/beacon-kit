@@ -46,6 +46,11 @@ func (sp *StateProcessor[ContextT]) processExecutionPayload(
 
 	sp.metrics.gaugeTimestamps(payloadTimestamp, consensusTimestamp)
 
+	requests, getErr := blk.GetBody().GetExecutionRequests()
+	if getErr != nil {
+		return getErr
+	}
+
 	sp.logger.Info("processExecutionPayload",
 		"consensus height", blk.GetSlot().Unwrap(),
 		"payload height", payload.GetNumber().Unwrap(),
@@ -53,6 +58,16 @@ func (sp *StateProcessor[ContextT]) processExecutionPayload(
 		"consensus timestamp", consensusTimestamp,
 		"skip payload verification", ctx.GetSkipPayloadVerification(),
 	)
+
+	sp.logger.Info(
+		"Processing execution requests",
+		"deposits", len(requests.Deposits),
+		"withdrawals", len(requests.Withdrawals),
+		"consolidations", len(requests.Consolidations),
+	)
+	if len(requests.Withdrawals) > 0 {
+		sp.logger.Info("Withdrawals", "withdrawals", requests.Withdrawals)
+	}
 
 	// Skip payload verification if the context is configured as such.
 	if !ctx.GetSkipPayloadVerification() {

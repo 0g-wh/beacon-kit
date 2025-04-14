@@ -27,6 +27,7 @@ import (
 	ctypes "github.com/berachain/beacon-kit/consensus-types/types"
 	"github.com/berachain/beacon-kit/errors"
 	"github.com/berachain/beacon-kit/primitives/common"
+	"github.com/berachain/beacon-kit/primitives/constants"
 	"github.com/berachain/beacon-kit/primitives/math"
 	"github.com/berachain/beacon-kit/primitives/version"
 	"github.com/berachain/beacon-kit/state-transition/core/state"
@@ -61,7 +62,51 @@ func (sp *StateProcessor[_]) processOperations(
 			return err
 		}
 	}
+
+	// new in electra
+	requests, err := blk.GetBody().GetExecutionRequests()
+	if err != nil {
+		return err
+	}
+	for _, req := range requests.Withdrawals {
+		if err := sp.processWithdrawalRequest(st, req); err != nil {
+			return err
+		}
+	}
 	return st.SetEth1Data(blk.GetBody().Eth1Data)
+}
+
+func (sp *StateProcessor[_]) processWithdrawalRequest(st *state.StateDB, wr *ctypes.WithdrawalRequest) error {
+	vIdx, err := st.ValidatorIndexByPubkey(wr.ValidatorPubKey)
+	if err != nil {
+		return nil
+	}
+	validator, err := st.ValidatorByIndex(vIdx)
+	if err != nil {
+		return err
+	}
+	if validator.GetExitEpoch().Unwrap() < constants.FarFutureEpoch {
+		return nil
+	}
+	wc, err := validator.GetWithdrawalCredentials().ToExecutionAddress()
+	if err != nil {
+		return err
+	}
+	if !wc.Equals(wr.SourceAddress) {
+		return nil
+	}
+
+	validator.SetWithdrawlAmount(wr.Amount)
+
+	idx, err := st.ValidatorIndexByPubkey(validator.GetPubkey())
+	if err != nil {
+		return err
+	}
+	if err = st.UpdateValidatorAtIndex(idx, validator); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // processDeposit processes the deposit and ensures it matches the local state.

@@ -31,7 +31,7 @@ import (
 )
 
 // ValidatorSize is the size of the Validator struct in bytes.
-const ValidatorSize = 121
+const ValidatorSize = 129
 
 // Compile-time checks for the Validator struct.
 var (
@@ -59,6 +59,8 @@ type Validator struct {
 	ExitEpoch math.Epoch `json:"exitEpoch"`
 	// WithdrawableEpoch is the epoch in which the validator can withdraw.
 	WithdrawableEpoch math.Epoch `json:"withdrawableEpoch"`
+	// WithdrawlAmount is the amount of the validator that can be withdrawn.
+	WithdrawlAmount math.Gwei `json:"withdrawlAmount"`
 }
 
 /* -------------------------------------------------------------------------- */
@@ -90,6 +92,7 @@ func NewValidatorFromDeposit(
 		ActivationEpoch:            math.Epoch(constants.FarFutureEpoch),
 		ExitEpoch:                  math.Epoch(constants.FarFutureEpoch),
 		WithdrawableEpoch:          math.Epoch(constants.FarFutureEpoch),
+		WithdrawlAmount:            math.Gwei(0),
 	}
 }
 
@@ -123,6 +126,7 @@ func (v *Validator) DefineSSZ(codec *ssz.Codec) {
 	ssz.DefineUint64(codec, &v.ActivationEpoch)
 	ssz.DefineUint64(codec, &v.ExitEpoch)
 	ssz.DefineUint64(codec, &v.WithdrawableEpoch)
+	ssz.DefineUint64(codec, &v.WithdrawlAmount)
 }
 
 // HashTreeRoot computes the SSZ hash tree root of the Validator object.
@@ -183,6 +187,9 @@ func (v *Validator) HashTreeRootWith(hh fastssz.HashWalker) error {
 
 	// Field (7) 'WithdrawableEpoch'
 	hh.PutUint64(uint64(v.WithdrawableEpoch))
+
+	// Field (8) 'WithdrawlAmount'
+	hh.PutUint64(uint64(v.WithdrawlAmount))
 
 	hh.Merkleize(indx)
 	return nil
@@ -316,4 +323,12 @@ func (v Validator) GetWithdrawableEpoch() math.Epoch {
 // GetWithdrawalCredentials returns the withdrawal credentials of the validator.
 func (v Validator) GetWithdrawalCredentials() WithdrawalCredentials {
 	return v.WithdrawalCredentials
+}
+
+func (v *Validator) SetWithdrawlAmount(amount math.Gwei) {
+	v.WithdrawlAmount = amount
+}
+
+func (v Validator) GetWithdrawlAmount() math.Gwei {
+	return v.WithdrawlAmount
 }

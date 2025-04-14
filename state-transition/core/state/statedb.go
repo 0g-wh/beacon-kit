@@ -184,6 +184,21 @@ func (s *StateDB) ExpectedWithdrawals(timestamp uint64) (engineprimitives.Withdr
 
 			// Increment the withdrawal index to process the next withdrawal.
 			withdrawalIndex++
+		} else if (slot.Unwrap()+1)%s.cs.SlotsPerEpoch() == 0 && validator.GetWithdrawlAmount() > 0 && validator.GetWithdrawlAmount() < validator.GetEffectiveBalance() {
+			withdrawalAddress, err = validator.GetWithdrawalCredentials().ToExecutionAddress()
+			if err != nil {
+				return nil, err
+			}
+
+			withdrawals = append(withdrawals, engineprimitives.NewWithdrawal(
+				math.U64(withdrawalIndex),
+				validatorIndex,
+				withdrawalAddress,
+				validator.GetWithdrawlAmount(),
+			))
+
+			// Increment the withdrawal index to process the next withdrawal.
+			withdrawalIndex++
 		}
 
 		// Cap the number of withdrawals to the maximum allowed per payload.
